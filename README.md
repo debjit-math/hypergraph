@@ -29,3 +29,13 @@ Open `index.html` in a browser. The tools are static HTML and JavaScript. Some t
 4. Add a row to the tools table above if you want the documentation to stay up to date.
 
 Use lowercase, hyphen-separated folder names. Avoid duplicate folder names and keep each tool self-contained to prevent file collisions.
+
+
+## Newly added tools
+
+- `tools/transversal-hitting-set-solver/` — minimum and minimal transversals / hitting sets.
+- `tools/hypergraph-coloring-solver/` — weak/strong coloring with bounded exact backtracking.
+- `tools/automorphism-group-explorer/` — exhaustive small-instance automorphism group and vertex orbits.
+- `tools/matching-packing-solver/` — maximum matching and maximal matching enumeration.
+
+Each tool is a standalone `index.html` with a neighboring `README.md`. To add another tool, create `tools/<tool-name>/index.html`, add a matching card to the root `index.html`, then commit and push. Algorithms with exponential complexity include explicit limits; a limit warning means a result may be inconclusive.
