@@ -87,22 +87,22 @@ svg text{user-select:none}
   <div class="card">
     <h3>1. Hyperedges</h3>
     <label>Edge list — one hyperedge per line</label>
-    <textarea id="edgeInput">(0,1,2,11)
-(0,3,5,6)
-(0,7,9,10)
-(1,3,4,10)
-(1,6,7,8)
-(2,3,8,9)
-(2,4,5,7)
-(4,6,9,11)
-(5,8,10,11)</textarea>
+    <textarea id="edgeInput">(1,2,3,12)
+(1,4,6,7)
+(1,8,10,11)
+(2,4,5,11)
+(2,7,8,9)
+(3,4,9,10)
+(3,5,6,8)
+(5,7,10,12)
+(6,9,11,12)</textarea>
     <label>Hyperedge labels — comma separated (edge indices start at 1)</label>
     <input id="labelInput" value="H1,H2,H3,H4,H5,H6,H7,H8,H9">
     <div class="row" style="margin-top:9px">
       <button class="primary" id="generateBtn">Generate</button>
       <button id="sampleBtn">Sample</button>
     </div>
-    <div class="small" style="margin-top:7px">Vertices are inferred automatically. Vertex IDs should be consecutive integers starting at 0.</div>
+    <div class="small" style="margin-top:7px">Vertices are inferred automatically. Vertex IDs should be consecutive integers starting at 1.</div>
   </div>
 
   <div class="card">
@@ -224,8 +224,9 @@ function parseEdges(text){
   else chunks=cleaned.split(/\n|;/).map(s=>s.trim()).filter(Boolean);
   const out=[];
   for(const chunk of chunks){
-    const nums=(chunk.match(/-?\d+/g)||[]).map(Number);
+    const nums=(chunk.match(/-?\d+/g)||[]).map(Number).map(n=>n-1);
     if(nums.length<2) throw new Error("Could not parse hyperedge: "+chunk);
+    if(nums.some(n=>n<0)) throw new Error("Vertex IDs must start at 1: "+chunk);
     const uniq=[...new Set(nums)];
     if(uniq.length!==nums.length) throw new Error("Duplicate vertex in hyperedge: "+chunk);
     out.push(uniq);
@@ -296,7 +297,7 @@ function render(){
 function isSearchMatch(kind,id){
   if(!searchTerm)return true;
   const q=searchTerm.toLowerCase();
-  if(kind==="v")return String(id).includes(q);
+  if(kind==="v")return String(id+1).includes(q);
   return String(labels[id]).toLowerCase().includes(q) || `h${id+1}`.includes(q);
 }
 function renderHypergraph(){
@@ -346,7 +347,7 @@ function renderHypergraph(){
     g.appendChild(c);
     if($("showLabels").checked){
       const t=svgEl("text",{y:25,fill:"#eef3ff","font-size":12,"font-weight":700,"text-anchor":"middle",opacity});
-      t.textContent=v;g.appendChild(t);
+      t.textContent=v+1;g.appendChild(t);
     }
     g.style.cursor="grab";
     g.addEventListener("pointerdown",ev=>startDrag(ev,v));
@@ -373,7 +374,7 @@ function renderIncidence(){
   vertices.forEach(v=>{
     const c=svgEl("circle",{cx:vp[v].x,cy:vp[v].y,r:13,fill:NODE_PALETTE[v%NODE_PALETTE.length]});
     c.addEventListener("click",()=>{selectedVertex=v;selectedEdge=null;render();});nodeLayer.appendChild(c);
-    const t=svgEl("text",{x:vp[v].x-25,y:vp[v].y+4,fill:"#fff","font-size":12,"text-anchor":"end"});t.textContent=v;nodeLayer.appendChild(t);
+    const t=svgEl("text",{x:vp[v].x-25,y:vp[v].y+4,fill:"#fff","font-size":12,"text-anchor":"end"});t.textContent=v+1;nodeLayer.appendChild(t);
   });
 }
 function startDrag(ev,v){
@@ -394,10 +395,10 @@ function parsePermutation(text=$("permInput").value){
   const used=new Set();
   const cycles=trimmed.split(";").map(s=>s.trim()).filter(Boolean);
   for(const ctext of cycles){
-    const c=ctext.split(",").map(s=>s.trim()).filter(Boolean).map(Number);
+    const c=ctext.split(",").map(s=>s.trim()).filter(Boolean).map(Number).map(v=>v-1);
     if(c.length<2)throw new Error(`Cycle "${ctext}" needs at least two vertices.`);
     for(const v of c){
-      if(!Number.isInteger(v)||!vertices.includes(v))throw new Error(`Invalid vertex ${v} in permutation.`);
+      if(!Number.isInteger(v)||!vertices.includes(v))throw new Error(`Invalid vertex ${v+1} in permutation.`);
       if(used.has(v))throw new Error(`Vertex ${v} occurs in more than one cycle.`);
       used.add(v);
     }
@@ -418,14 +419,14 @@ function mapToCycles(m){
   const seen=new Set(), out=[];
   for(const v of vertices)if(!seen.has(v)){
     const cyc=[];let x=v;
-    while(!seen.has(x)){seen.add(x);cyc.push(x);x=m[x];}
+    while(!seen.has(x)){seen.add(x);cyc.push(x+1);x=m[x];}
     if(cyc.length>1)out.push(cyc.join(","));
   }
   return out.length?out.join(";"):"identity";
 }
 function permutationTable(m){
   return `<table><thead><tr><th>v</th><th>→</th><th>Status</th></tr></thead><tbody>`+
-    vertices.map(v=>`<tr><td>${v}</td><td>${m[v]}</td><td>${m[v]===v?'<span class="badge good">fixed</span>':'<span class="badge warn">moved</span>'}</td></tr>`).join("")+
+    vertices.map(v=>`<tr><td>${v+1}</td><td>${m[v]+1}</td><td>${m[v]===v?'<span class="badge good">fixed</span>':'<span class="badge warn">moved</span>'}</td></tr>`).join("")+
     `</tbody></table>`;
 }
 function applyPermutation(animate=true){
@@ -500,7 +501,7 @@ function updatePanels(){
       <div class="stat"><b>${a.components.length}</b><span>Components</span></div>
     </div>
     <h3 style="margin:13px 0 7px">Vertex degrees</h3>
-    <table><thead><tr><th>Vertex</th><th>Degree</th></tr></thead><tbody>${vertices.map(v=>`<tr><td>${v}</td><td>${a.degrees[v]}</td></tr>`).join("")}</tbody></table>
+    <table><thead><tr><th>Vertex</th><th>Degree</th></tr></thead><tbody>${vertices.map(v=>`<tr><td>${v+1}</td><td>${a.degrees[v]}</td></tr>`).join("")}</tbody></table>
     <h3 style="margin:13px 0 7px">Properties</h3>
     <div class="small">Uniform: ${a.uniform?"yes":"no"} · Regular: ${a.regular?"yes":"no"} · Duplicate hyperedges: ${a.duplicates} · Isolated vertices: ${a.isolated.length? a.isolated.join(", "):"none"} · Linearity: ${checkLinear()?"yes":"no"}</div>`;
   renderMatrixPanel();
@@ -518,7 +519,7 @@ function checkLinear(){
   }return true;
 }
 function renderMatrixPanel(){
-  $("matrix").innerHTML=`<div class="matrix"><table><thead><tr><th class="rowhead">v \\ H</th>${edges.map((_,i)=>`<th>${esc(labels[i])}</th>`).join("")}</tr></thead><tbody>${vertices.map(v=>`<tr><th class="rowhead">${v}</th>${edges.map(e=>`<td>${e.includes(v)?1:0}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+  $("matrix").innerHTML=`<div class="matrix"><table><thead><tr><th class="rowhead">v \\ H</th>${edges.map((_,i)=>`<th>${esc(labels[i])}</th>`).join("")}</tr></thead><tbody>${vertices.map(v=>`<tr><th class="rowhead">${v+1}</th>${edges.map(e=>`<td>${e.includes(v)?1:0}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
 }
 function intersectionMatrix(){
   return `<div class="matrix"><table><thead><tr><th class="rowhead">∩</th>${edges.map((_,i)=>`<th>${i+1}</th>`).join("")}</tr></thead><tbody>`+
@@ -596,8 +597,8 @@ function renderSpectraPanel(){
     <h3 style="margin:13px 0 7px">Adjacency spectrum</h3>
     <div class="help" style="font-family:ui-monospace,monospace">${vals.map((x,i)=>`λ${i+1} = ${formatNumber(x)}`).join("<br>")}</div>
     <h3 style="margin:13px 0 7px">Banerjee adjacency matrix A</h3>
-    <div class="matrix"><table><thead><tr><th class="rowhead">v</th>${vertices.map(v=>`<th>${v}</th>`).join("")}</tr></thead><tbody>
-      ${A.map((row,i)=>`<tr><th class="rowhead">${i}</th>${row.map(x=>`<td>${formatNumber(x)}</td>`).join("")}</tr>`).join("")}
+    <div class="matrix"><table><thead><tr><th class="rowhead">v</th>${vertices.map(v=>`<th>${v+1}</th>`).join("")}</tr></thead><tbody>
+      ${A.map((row,i)=>`<tr><th class="rowhead">${i+1}</th>${row.map(x=>`<td>${formatNumber(x)}</td>`).join("")}</tr>`).join("")}
     </tbody></table></div>
     <div class="footer-note">Row sums: ${degreeInfo}</div>
   `;
@@ -636,7 +637,7 @@ function exportJSON(){
 }
 function loadJSON(data){
   edges=data.edges.map(e=>e.map(Number));labels=data.labels||edges.map((_,i)=>`H${i+1}`);
-  $("edgeInput").value=edges.map(e=>`(${e.join(",")})`).join("\n");$("labelInput").value=labels.join(",");
+  $("edgeInput").value=edges.map(e=>`(${e.map(v=>v+1).join(",")})`).join("\n");$("labelInput").value=labels.join(",");
   vertices=inferVertices(edges);positions=data.positions||{};if(!Object.keys(positions).length)initialLayout();
   originalPositions=clonePositions(positions);mapping=parsePermutation(data.permutation||"");$("permInput").value=data.permutation||"";viewMode=data.viewMode||"hull";$("modeSelect").value=viewMode;render();
 }
@@ -649,18 +650,18 @@ function generate(){
 function neighbors(){
   if(selectedVertex===null){alert("Select a vertex first.");return;}
   const ns=new Set();edges.filter(e=>e.includes(selectedVertex)).forEach(e=>e.forEach(v=>{if(v!==selectedVertex)ns.add(v)}));
-  alert(`Neighbors of vertex ${selectedVertex}: ${[...ns].sort((a,b)=>a-b).join(", ")||"none"}`);
+  alert(`Neighbors of vertex ${selectedVertex+1}: ${[...ns].sort((a,b)=>a-b).map(v=>v+1).join(", ")||"none"}`);
 }
 function setup(){
-  $("generateBtn").onclick=generate;$("sampleBtn").onclick=()=>{$("edgeInput").value=`(0,1,2,11)
-(0,3,5,6)
-(0,7,9,10)
-(1,3,4,10)
-(1,6,7,8)
-(2,3,8,9)
-(2,4,5,7)
-(4,6,9,11)
-(5,8,10,11)`;$("labelInput").value="H1,H2,H3,H4,H5,H6,H7,H8,H9";$("permInput").value="1,2,3;5,7";generate()};
+  $("generateBtn").onclick=generate;$("sampleBtn").onclick=()=>{$("edgeInput").value=`(1,2,3,12)
+(1,4,6,7)
+(1,8,10,11)
+(2,4,5,11)
+(2,7,8,9)
+(3,4,9,10)
+(3,5,6,8)
+(5,7,10,12)
+(6,9,11,12)`;$("labelInput").value="H1,H2,H3,H4,H5,H6,H7,H8,H9";$("permInput").value="1,2,3;5,7";generate()};
   $("applyBtn").onclick=()=>applyPermutation(true);$("previewBtn").onclick=showPermutationPreview;
   $("reverseBtn").onclick=()=>{try{$("permInput").value=mapToCycles(inverseMap(parsePermutation()));showPermutationPreview()}catch(e){alert(e.message)}};
   $("powerBtn").onclick=()=>{try{const p=+$("powerInput").value||1;$("permInput").value=mapToCycles(powerMap(parsePermutation(),p));showPermutationPreview()}catch(e){alert(e.message)}};
